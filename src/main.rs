@@ -1,31 +1,45 @@
+use std::env;
 use std::fs::{rename, File};
 use std::io::{BufRead, BufReader};
 
 #[derive(Debug)]
 struct FileData {
-    oldName: String,
-    newName: String,
+    old_name: String,
+    new_name: String,
 }
 
 impl FileData {
     fn is_empty(&self) -> bool {
-        self.oldName.trim().is_empty() || self.newName.trim().is_empty()
+        self.old_name.trim().is_empty() || self.new_name.trim().is_empty()
     }
 
-    fn rename(self) -> bool {
-        match rename(self.oldName, self.newName) {
-            Ok(_) => true,
+    fn rename(self) {
+        match rename(&self.old_name, &self.new_name) {
+            Ok(_) => {}
             Err(err) => {
-                println!("Failed with error: {:#?}", err);
-                false
+                println!(
+                    "Renaming \"{}\" failed with error: {:?}",
+                    self.old_name,
+                    err.kind()
+                );
             }
         }
     }
 }
 
 fn main() {
-    println!("Hello, world!");
-    println!("{:#?}", get_filenames_to_rename_from_file("test.txt"));
+    let args: Vec<_> = env::args().collect::<_>();
+    if args.len() < 2 {
+        println!("No filename argument given!");
+        return;
+    }
+
+    let filename = args[1].to_owned();
+
+    let files = get_filenames_to_rename_from_file(&filename).unwrap();
+    for file in files {
+        file.rename();
+    }
 }
 
 fn get_filenames_to_rename_from_file(filename: &str) -> Option<Vec<FileData>> {
@@ -45,18 +59,18 @@ fn get_filenames_to_rename_from_file(filename: &str) -> Option<Vec<FileData>> {
     {
         let seperator = " --> ";
         let possible_arrow_pos = line.find(seperator);
-        let fileData = {
+        let file_data = {
             if let Some(pos) = possible_arrow_pos {
                 Some(FileData {
-                    oldName: String::from(line[..pos].trim()),
-                    newName: String::from(line[(pos + seperator.len())..].trim()),
+                    old_name: String::from(line[..pos].trim()),
+                    new_name: String::from(line[(pos + seperator.len())..].trim()),
                 })
             } else {
                 None
             }
         };
 
-        if let Some(fd) = fileData {
+        if let Some(fd) = file_data {
             if !fd.is_empty() {
                 files.push(fd);
             }
